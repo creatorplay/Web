@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camva Pro - CRM Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                    <h1>Camva Pro CRM</h1>
+                </div>
+                <nav class="nav">
+                    <button class="btn btn--primary" id="addCustomerBtn">
+                        <i class="fas fa-plus"></i> Add Customer
+                    </button>
+                    <button class="btn btn--secondary" id="importCustomerBtn">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                    <button class="btn btn--outline" id="exportCsvBtn">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Stats -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalCustomers">0</h3>
+                        <p>Total Customers</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="activeSubscriptions">0</h3>
+                        <p>Active Subscriptions</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="expiringThisWeek">0</h3>
+                        <p>Expiring This Week</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--primary">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalRevenue">₹0</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Search and Filters -->
+            <div class="search-section">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search customers by name, email, phone...">
+                </div>
+                <div class="filters">
+                    <select id="teamFilter" class="form-control">
+                        <option value="">All Teams</option>
+                        <option value="Team 1">Team 1</option>
+                        <option value="Team 2">Team 2</option>
+                        <option value="Team 3">Team 3</option>
+                        <option value="Team 4">Team 4</option>
+                        <option value="Team 5">Team 5</option>
+                    </select>
+                    <select id="planFilter" class="form-control">
+                        <option value="">All Plans</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="annual">Annual</option>
+                    </select>
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="expiring">Expiring Soon</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn--secondary" id="viewExpiringBtn">
+                    <i class="fas fa-exclamation-triangle"></i> View Expiring Soon
+                </button>
+                <button class="btn btn--outline" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <!-- Customers Grid -->
+            <div class="customers-grid" id="customersGrid">
+                <!-- Customers will be loaded here -->
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loadingState">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading customers...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="emptyState">
+                <i class="fas fa-users"></i>
+                <h3>No customers found</h3>
+                <p>Start by adding your first customer</p>
+                <button class="btn btn--primary" onclick="openAddCustomerModal()">
+                    <i class="fas fa-plus"></i> Add Customer
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Customer Modal -->
+    <div class="modal hidden" id="addCustomerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Customer</h2>
+                <button class="modal-close" onclick="closeModal('addCustomerModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addCustomerForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone *</label>
+                    <input type="tel" name="phone" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team *</label>
+                    <select name="team" class="form-control" required>
+                        <option value="">Select Team</option>
+                        <option value="Team 1">Team 1</option>
+                        <option value="Team 2">Team 2</option>
+                        <option value="Team 3">Team 3</option>
+                        <option value="Team 4">Team 4</option>
+                        <option value="Team 5">Team 5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan *</label>
+                    <select name="plan" class="form-control" required id="planSelect">
+                        <option value="">Select Plan</option>
+                        <option value="monthly">Monthly - ₹49</option>
+                        <option value="quarterly">Quarterly - ₹99</option>
+                        <option value="annual">Annual - ₹299</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Amount *</label>
+                    <input type="number" name="payment" class="form-control" required id="paymentAmount">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Additional Notes</label>
+                    <textarea name="additional_notes" class="form-control" rows="3"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--outline" onclick="closeModal('addCustomerModal')">Cancel</button>
+                <button type="submit" form="addCustomerForm" class="btn btn--primary">Add Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Customer Modal -->
+    <div class="modal hidden" id="importCustomerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Old Customer</h2>
+                <button class="modal-close" onclick="closeModal('importCustomerModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="importCustomerForm" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone *</label>
+                    <input type="tel" name="phone" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team *</label>
+                    <select name="team" class="form-control" required>
+                        <option value="">Select Team</option>
+                        <option value="Team 1">Team 1</option>
+                        <option value="Team 2">Team 2</option>
+                        <option value="Team 3">Team 3</option>
+                        <option value="Team 4">Team 4</option>
+                        <option value="Team 5">Team 5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan *</label>
+                    <select name="plan" class="form-control" required>
+                        <option value="">Select Plan</option>
+                        <option value="monthly">Monthly - ₹49</option>
+                        <option value="quarterly">Quarterly - ₹99</option>
+                        <option value="annual">Annual - ₹299</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Amount *</label>
+                    <input type="number" name="payment" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Joined Date *</label>
+                    <input type="date" name="joined" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reminder Date *</label>
+                    <input type="date" name="reminder" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Expiry Date *</label>
+                    <input type="date" name="expired" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Additional Notes</label>
+                    <textarea name="additional_notes" class="form-control" rows="3"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--outline" onclick="closeModal('importCustomerModal')">Cancel</button>
+                <button type="submit" form="importCustomerForm" class="btn btn--primary">Import Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Customer Modal -->
+    <div class="modal hidden" id="editCustomerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Customer</h2>
+                <button class="modal-close" onclick="closeModal('editCustomerModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editCustomerForm" class="modal-body">
+                <input type="hidden" name="id" id="editCustomerId">
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone *</label>
+                    <input type="tel" name="phone" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team *</label>
+                    <select name="team" class="form-control" required>
+                        <option value="">Select Team</option>
+                        <option value="Team 1">Team 1</option>
+                        <option value="Team 2">Team 2</option>
+                        <option value="Team 3">Team 3</option>
+                        <option value="Team 4">Team 4</option>
+                        <option value="Team 5">Team 5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan *</label>
+                    <select name="plan" class="form-control" required>
+                        <option value="">Select Plan</option>
+                        <option value="monthly">Monthly - ₹49</option>
+                        <option value="quarterly">Quarterly - ₹99</option>
+                        <option value="annual">Annual - ₹299</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Amount *</label>
+                    <input type="number" name="payment" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Additional Notes</label>
+                    <textarea name="additional_notes" class="form-control" rows="3"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--outline" onclick="closeModal('editCustomerModal')">Cancel</button>
+                <button type="submit" form="editCustomerForm" class="btn btn--primary">Update Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
